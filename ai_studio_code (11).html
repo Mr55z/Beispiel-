@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="de" class="scroll-smooth">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=0">
+  <title>VONE — [PROJEKT-NAME]</title>
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/countup.js/2.0.7/countUp.umd.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.css">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@200;300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+  <style>
+    :root { --primary: #6366f1; --bg: #000205; --accent: #818cf8; }
+    body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: var(--bg); color: #f8fafc; overflow-x: hidden; }
+    .mono { font-family: 'JetBrains Mono', monospace; }
+    
+    #loader { position: fixed; inset: 0; z-index: 9999; background: #000; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.5s ease; }
+    .loader-bar { width: 200px; height: 2px; background: #333; margin-top: 20px; position: relative; overflow: hidden; }
+    .loader-progress { position: absolute; top: 0; left: 0; height: 100%; background: #6366f1; animation: load 2s ease-in-out forwards; width: 0%; }
+    @keyframes load { 0% { width: 0%; } 50% { width: 70%; } 100% { width: 100%; } }
+
+    .glass { background: rgba(20, 20, 25, 0.6); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.05); }
+    .glass-strong { background: rgba(5, 5, 10, 0.9); backdrop-filter: blur(40px); border: 1px solid rgba(255,255,255,0.08); }
+    .grid-bg { background-image: linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px); background-size: 40px 40px; mask-image: linear-gradient(to bottom, black 40%, transparent 100%); }
+
+    .live-dot { width: 8px; height: 8px; background: #10b981; border-radius: 50%; animation: blink 1.5s infinite; }
+    @keyframes blink { 0% { opacity: 1; box-shadow: 0 0 10px #10b981; } 50% { opacity: 0.4; } 100% { opacity: 1; box-shadow: 0 0 10px #10b981; } }
+
+    .pricing-snap { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; gap: 1.5rem; padding: 2rem 0; scrollbar-width: none; }
+    .pricing-snap::-webkit-scrollbar { display: none; }
+    .price-item { min-width: 85vw; scroll-snap-align: center; }
+    @media (min-width: 768px) { .price-item { min-width: 380px; } }
+    @media (min-width: 1280px) { .price-item { min-width: 0; flex: 1; } }
+
+    .ticker-wrap { width: 100%; overflow: hidden; }
+    .ticker { display: flex; gap: 2rem; animation: ticker 40s linear infinite; width: max-content; }
+    @keyframes ticker { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+
+    .mac-font { font-family: 'JetBrains Mono', monospace; letter-spacing: 2px; }
+  </style>
+</head>
+<body>
+
+<div id="loader">
+    <div class="text-4xl font-black italic tracking-tighter mb-2">VONE <span class="text-indigo-500">CORE</span></div>
+    <div class="text-[10px] font-bold text-slate-500 uppercase tracking-[0.5em] mono">Initializing Nodes...</div>
+    <div class="loader-bar"><div class="loader-progress"></div></div>
+</div>
+
+<nav class="fixed top-0 inset-x-0 z-50 transition-all duration-300">
+    <div class="max-w-7xl mx-auto px-6 py-6">
+        <div class="glass rounded-2xl p-4 flex justify-between items-center shadow-2xl">
+            <div class="flex items-center gap-5">
+                <a href="#hero" class="bg-indigo-600 w-12 h-12 rounded-xl flex items-center justify-center text-xl font-black italic shadow-lg shadow-indigo-600/30">V1</a>
+                <div class="hidden md:block">
+                    <div class="text-[10px] font-black uppercase text-slate-400 tracking-widest">Global Status</div>
+                    <div class="flex items-center gap-2 mt-1">
+                        <div class="live-dot"></div>
+                        <span class="text-[9px] font-bold text-emerald-400 uppercase tracking-widest mono">SYSTEM OPERATIONAL</span>
+                    </div>
+                </div>
+            </div>
+            <div class="flex items-center gap-4">
+                <a href="#setup" class="hidden md:flex items-center gap-2 px-6 py-3 rounded-xl bg-white/5 border border-white/5 hover:bg-white/10 transition text-[10px] font-black uppercase tracking-widest">
+                    <i class="fas fa-terminal text-indigo-400"></i> Setup
+                </a>
+                <button onclick="toggleMenu()" class="w-12 h-12 flex items-center justify-center bg-white/5 rounded-xl border border-white/5 hover:border-indigo-500/50 transition">
+                    <i class="fas fa-bars text-indigo-400"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<div id="menuOverlay" class="fixed inset-0 bg-[#020205] z-40 transform translate-x-full transition-transform duration-500 flex flex-col justify-center items-center">
+    <button onclick="toggleMenu()" class="absolute top-10 right-10 text-3xl text-slate-500 hover:text-white transition">✕</button>
+    <div class="grid gap-8 text-center">
+        <a href="#hero" onclick="toggleMenu()" class="text-5xl md:text-7xl font-black uppercase italic text-transparent bg-clip-text bg-gradient-to-b from-white to-slate-700 hover:to-indigo-500">Start</a>
+        <a href="#dashboard" onclick="toggleMenu()" class="text-5xl md:text-7xl font-black uppercase italic text-transparent bg-clip-text bg-gradient-to-b from-white to-slate-700 hover:to-indigo-500">Status</a>
+        <a href="#pricing" onclick="toggleMenu()" class="text-5xl md:text-7xl font-black uppercase italic text-transparent bg-clip-text bg-gradient-to-b from-white to-slate-700 hover:to-indigo-500">Pakete</a>
+        <a href="#setup" onclick="toggleMenu()" class="text-5xl md:text-7xl font-black uppercase italic text-transparent bg-clip-text bg-gradient-to-b from-white to-slate-700 hover:to-indigo-500">Setup</a>
+        <a href="#faq" onclick="toggleMenu()" class="text-5xl md:text-7xl font-black uppercase italic text-transparent bg-clip-text bg-gradient-to-b from-white to-slate-700 hover:to-indigo-500">FAQ</a>
+    </div>
+</div>
+
+<section id="hero" class="min-h-screen relative flex flex-col justify-center items-center text-center overflow-hidden px-4">
+    <div class="absolute inset-0 grid-bg opacity-30"></div>
+    <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-indigo-600/20 rounded-full blur-[120px] pointer-events-none"></div>
+
+    <div class="relative z-10 max-w-5xl mx-auto pt-20">
+        <div class="inline-flex items-center gap-3 px-4 py-2 rounded-full border border-indigo-500/30 bg-indigo-900/10 mb-8" data-aos="fade-down">
+            <span class="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
+            <span class="text-[10px] font-black uppercase tracking-[0.3em] text-indigo-300 mono">V2.0 Core Active</span>
+        </div>
+
+        <h1 class="text-6xl sm:text-8xl md:text-[10rem] font-black uppercase italic leading-[0.85] mb-10 tracking-tighter text-white" data-aos="zoom-out">
+            QUANTUM<br><span class="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-indigo-600 to-purple-600">[SERVICE].</span>
+        </h1>
+
+        <p class="max-w-2xl mx-auto text-xs md:text-sm font-bold text-slate-400 uppercase tracking-[0.3em] leading-relaxed mb-12 border-l-2 border-indigo-500 pl-6 text-left" data-aos="fade-up">
+            [NUTZEN] ohne Kompromisse. <br>
+            <span class="text-white">Dedizierte Nodes.</span> <span class="text-white">Echtzeit-Synchronisation.</span> <span class="text-white">Zero-Log Garantie.</span><br>
+            Die Infrastruktur von Morgen, heute verfügbar.
+        </p>
+
+        <div class="flex flex-col sm:flex-row gap-5 justify-center w-full max-w-lg mx-auto" data-aos="fade-up">
+            <a href="#pricing" class="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white py-6 rounded-2xl font-black uppercase text-[11px] tracking-widest shadow-xl transition-all transform hover:-translate-y-1 flex items-center justify-center gap-3">
+                Pakete Wählen <i class="fas fa-arrow-right"></i>
+            </a>
+            <a href="#setup" class="flex-1 bg-white/5 border border-white/10 hover:bg-white/10 text-white py-6 rounded-2xl font-black uppercase text-[11px] tracking-widest backdrop-blur-md transition-all">
+                Setup Guide
+            </a>
+        </div>
+    </div>
+</section>
+
+<section id="dashboard" class="py-24 px-6 relative border-y border-white/5 bg-[#050508]">
+    <div class="max-w-7xl mx-auto">
+        <div class="flex flex-col md:flex-row justify-between items-end mb-16 gap-6">
+            <div>
+                <h2 class="text-3xl md:text-5xl font-black uppercase italic mb-2">Live <span class="text-indigo-500">Telemetry</span></h2>
+                <p class="text-xs font-bold text-slate-500 uppercase tracking-widest mono">Realtime Server Metrics</p>
+            </div>
+            <div class="flex gap-4">
+                <div class="px-4 py-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-bold uppercase tracking-widest flex items-center gap-2">
+                    <i class="fas fa-check-circle"></i> All Systems Go
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div class="glass p-8 rounded-3xl group relative overflow-hidden">
+                <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Active Connections</div>
+                <div class="text-4xl font-black text-white mb-2 mono" id="countUsers">0</div>
+                <div class="w-full bg-slate-800 h-1 mt-4 overflow-hidden rounded-full">
+                    <div class="bg-indigo-500 h-full w-[85%] shadow-[0_0_10px_#6366f1]"></div>
+                </div>
+            </div>
+            <div class="glass p-8 rounded-3xl group relative overflow-hidden">
+                <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Avg. Latency</div>
+                <div class="text-4xl font-black text-white mb-2 mono">14<span class="text-lg text-slate-500">ms</span></div>
+                <div class="flex gap-1 mt-4 h-4 items-end">
+                    <div class="w-1 bg-emerald-500 h-2"></div><div class="w-1 bg-emerald-500 h-3"></div><div class="w-1 bg-emerald-500 h-4"></div><div class="w-1 bg-emerald-500 h-2"></div>
+                </div>
+            </div>
+            <div class="glass p-8 rounded-3xl group relative overflow-hidden">
+                <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Network Load</div>
+                <div class="text-4xl font-black text-white mb-2 mono">42<span class="text-lg text-slate-500">%</span></div>
+                <div class="text-[9px] text-cyan-400 font-bold uppercase mt-4">100 Gbit/s Backbone</div>
+            </div>
+            <div class="glass p-8 rounded-3xl group relative overflow-hidden">
+                <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Threats Blocked</div>
+                <div class="text-4xl font-black text-white mb-2 mono" id="countThreats">0</div>
+                <div class="text-[9px] text-amber-400 font-bold uppercase mt-4">DDoS Shield Active</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section id="features" class="py-32 px-6">
+    <div class="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div class="glass p-10 rounded-[2.5rem] group" data-aos="fade-up">
+            <div class="w-16 h-16 bg-indigo-500/10 rounded-2xl flex items-center justify-center text-3xl text-indigo-400 mb-8 border border-indigo-500/20">
+                <i class="fas fa-fingerprint"></i>
+            </div>
+            <h3 class="text-2xl font-black uppercase italic mb-4">No Logs. Ever.</h3>
+            <p class="text-xs font-bold text-slate-400 leading-loose uppercase">
+                Wir speichern nichts außer deiner [ID] für die technische Freischaltung. Keine persönlichen Logs, kein Tracking.
+            </p>
+        </div>
+        <div class="glass p-10 rounded-[2.5rem] group" data-aos="fade-up" data-aos-delay="100">
+            <div class="w-16 h-16 bg-emerald-500/10 rounded-2xl flex items-center justify-center text-3xl text-emerald-400 mb-8 border border-emerald-500/20">
+                <i class="fas fa-database"></i>
+            </div>
+            <h3 class="text-2xl font-black uppercase italic mb-4">Realtime Sync</h3>
+            <p class="text-xs font-bold text-slate-400 leading-loose uppercase">
+                Unsere Datenbank-Integration sorgt dafür, dass deine [HARDWARE-IDENTIFIKATION] weltweit sofort repliziert wird.
+            </p>
+        </div>
+        <div class="glass p-10 rounded-[2.5rem] group" data-aos="fade-up" data-aos-delay="200">
+            <div class="w-16 h-16 bg-amber-500/10 rounded-2xl flex items-center justify-center text-3xl text-amber-400 mb-8 border border-amber-500/20">
+                <i class="fas fa-bolt"></i>
+            </div>
+            <h3 class="text-2xl font-black uppercase italic mb-4">[LEISTUNG]-SUPPORT</h3>
+            <p class="text-xs font-bold text-slate-400 leading-loose uppercase">
+                Dedizierte Bandbreite für [QUALITÄT]. Moderne Codec-Unterstützung für maximale Effizienz bei weniger Verbrauch.
+            </p>
+        </div>
+    </div>
+</section>
+
+<section class="py-20 px-6 bg-slate-900/20 border-y border-white/5">
+    <div class="max-w-5xl mx-auto overflow-x-auto">
+        <table class="w-full text-left border-collapse min-w-[600px]">
+            <thead>
+                <tr>
+                    <th class="p-6 text-[10px] font-black uppercase text-slate-500">Feature</th>
+                    <th class="p-6 text-xl font-black uppercase italic text-white">VONE <span class="text-indigo-500">CORE</span></th>
+                    <th class="p-6 text-sm font-bold uppercase text-slate-600">Standard [MARKTSCHNITT]</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-white/5 text-[10px] font-bold uppercase text-slate-400">
+                <tr><td class="p-6">Uptime Guarantee</td><td class="p-6 text-emerald-400">99.9% SLA</td><td class="p-6">Unknown</td></tr>
+                <tr><td class="p-6">Routing Technology</td><td class="p-6 text-white">Anycast AI</td><td class="p-6">Shared Cheap</td></tr>
+                <tr><td class="p-6">Setup Time</td><td class="p-6 text-white">Instant (Database)</td><td class="p-6">24h Manual</td></tr>
+                <tr><td class="p-6">Verfügbarkeit</td><td class="p-6 text-indigo-400">Dedizierte Ressourcen</td><td class="p-6">Hohe Last</td></tr>
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<section id="pricing" class="py-32 px-4 relative overflow-hidden">
+    <div class="max-w-7xl mx-auto text-center mb-16">
+        <h2 class="text-5xl md:text-8xl font-black uppercase italic mb-4 text-white">Select <span class="text-indigo-500">Tier</span></h2>
+        <p class="text-xs font-bold text-slate-500 uppercase tracking-[0.5em]">Prepaid. No Subscription. Instant.</p>
+    </div>
+
+    <div class="max-w-[1900px] mx-auto pricing-snap xl:grid xl:grid-cols-5 xl:gap-6 px-4">
+        <!-- Paket 1 -->
+        <div class="price-item glass p-8 rounded-[2.5rem] flex flex-col border-t border-white/10 hover:border-indigo-500/50 transition duration-500">
+            <span class="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-4">Starter</span>
+            <div class="text-5xl font-black text-white italic tracking-tighter mb-2">40 €</div>
+            <div class="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mb-8 pb-4 border-b border-white/5">30 Tage</div>
+            <ul class="space-y-4 mb-8 flex-grow">
+                <li class="flex items-center text-[10px] font-bold text-slate-400 uppercase"><i class="fas fa-check text-indigo-500 mr-3"></i> 1 Gerät</li>
+                <li class="flex items-center text-[10px] font-bold text-slate-400 uppercase"><i class="fas fa-check text-indigo-500 mr-3"></i> [BASIS-SUPPORT]</li>
+            </ul>
+            <button onclick="openModal('1 Monat - 40€')" class="w-full py-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl font-black uppercase text-[10px] text-white transition">Wählen</button>
+        </div>
+        <!-- Paket 2 -->
+        <div class="price-item glass p-8 rounded-[2.5rem] flex flex-col border-t border-white/10 hover:border-emerald-500/50 transition duration-500">
+            <span class="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-4">Performance</span>
+            <div class="text-5xl font-black text-white italic tracking-tighter mb-2">80 €</div>
+            <div class="text-[10px] font-bold text-emerald-400 uppercase tracking-widest mb-8 pb-4 border-b border-white/5">6 Monate</div>
+            <ul class="space-y-4 mb-8 flex-grow">
+                <li class="flex items-center text-[10px] font-bold text-slate-400 uppercase"><i class="fas fa-check text-emerald-500 mr-3"></i> Fast Routing</li>
+                <li class="flex items-center text-[10px] font-bold text-slate-400 uppercase"><i class="fas fa-check text-emerald-500 mr-3"></i> [STABLE-OPTION]</li>
+            </ul>
+            <button onclick="openModal('6 Monate - 80€')" class="w-full py-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl font-black uppercase text-[10px] text-white transition">Wählen</button>
+        </div>
+        <!-- Paket 3 -->
+        <div class="price-item bg-indigo-600 p-8 rounded-[2.5rem] flex flex-col shadow-2xl xl:scale-105 z-10 relative">
+            <div class="absolute top-0 right-0 bg-white text-indigo-600 text-[9px] font-black px-4 py-1 rounded-bl-xl uppercase tracking-widest">Top Choice</div>
+            <span class="text-[9px] font-black text-indigo-200 uppercase tracking-widest mb-4">Yearly Premium</span>
+            <div class="text-6xl font-black text-white italic tracking-tighter mb-2">120 €</div>
+            <div class="text-[10px] font-bold text-white/80 uppercase tracking-widest mb-8 pb-4 border-b border-indigo-400/30">12 Monate</div>
+            <ul class="space-y-4 mb-8 flex-grow">
+                <li class="flex items-center text-[10px] font-black text-white uppercase"><i class="fas fa-star text-amber-300 mr-3"></i> VIP Routing</li>
+                <li class="flex items-center text-[10px] font-black text-white uppercase"><i class="fas fa-bolt text-amber-300 mr-3"></i> [MAX-QUALITÄT]</li>
+                <li class="flex items-center text-[10px] font-black text-white uppercase"><i class="fas fa-headset text-amber-300 mr-3"></i> 24/7 Support</li>
+            </ul>
+            <button onclick="openModal('12 Monate - 120€')" class="w-full py-5 bg-white text-indigo-900 rounded-xl font-black uppercase text-[11px] shadow-xl hover:scale-105 transition">Jetzt Sichern</button>
+        </div>
+        <!-- Paket 4 -->
+        <div class="price-item glass p-8 rounded-[2.5rem] flex flex-col border-t border-white/10 hover:border-cyan-500/50 transition duration-500">
+            <span class="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-4">Diamond</span>
+            <div class="text-5xl font-black text-white italic tracking-tighter mb-2">200 €</div>
+            <div class="text-[10px] font-bold text-cyan-400 uppercase tracking-widest mb-8 pb-4 border-b border-white/5">Dedicated</div>
+            <ul class="space-y-4 mb-8 flex-grow">
+                <li class="flex items-center text-[10px] font-bold text-slate-400 uppercase"><i class="fas fa-gem text-cyan-500 mr-3"></i> Dedicated Node</li>
+                <li class="flex items-center text-[10px] font-bold text-slate-400 uppercase"><i class="fas fa-users text-cyan-500 mr-3"></i> 2 Geräte</li>
+            </ul>
+            <button onclick="openModal('Diamond - 200€')" class="w-full py-4 bg-cyan-900/20 rounded-xl font-black uppercase text-[10px] text-cyan-400 transition">Wählen</button>
+        </div>
+        <!-- Paket 5 -->
+        <div class="price-item glass p-8 rounded-[2.5rem] flex flex-col border-t border-white/10 hover:border-amber-500/50 transition duration-500">
+            <span class="text-[9px] font-black text-amber-500 uppercase tracking-widest mb-4">Black VIP</span>
+            <div class="text-5xl font-black text-amber-500 italic tracking-tighter mb-2">300 €</div>
+            <div class="text-[10px] font-bold text-amber-500/60 uppercase tracking-widest mb-8 pb-4 border-b border-white/5">Concierge</div>
+            <ul class="space-y-4 mb-8 flex-grow">
+                <li class="flex items-center text-[10px] font-bold text-slate-400 uppercase"><i class="fas fa-crown text-amber-500 mr-3"></i> Private Server</li>
+                <li class="flex items-center text-[10px] font-bold text-slate-400 uppercase"><i class="fas fa-user-tie text-amber-500 mr-3"></i> Personal Contact</li>
+            </ul>
+            <button onclick="openModal('Black VIP - 300€')" class="w-full py-4 bg-amber-900/20 rounded-xl font-black uppercase text-[10px] text-amber-500 transition">VIP Request</button>
+        </div>
+    </div>
+</section>
+
+<section id="setup" class="py-32 px-6 bg-slate-900/30">
+    <div class="max-w-4xl mx-auto">
+        <h2 class="text-center text-4xl md:text-6xl font-black uppercase italic text-white mb-12">Setup <span class="text-indigo-500">Center</span></h2>
+        
+        <div class="flex justify-center gap-4 mb-12">
+            <button onclick="switchTab('tab1')" id="btn-tab1" class="px-8 py-4 bg-indigo-600 rounded-xl text-[10px] font-black uppercase tracking-widest text-white shadow-lg">[OS-GRUPPE 1]</button>
+            <button onclick="switchTab('tab2')" id="btn-tab2" class="px-8 py-4 bg-white/5 border border-white/5 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-white transition">[OS-GRUPPE 2]</button>
+        </div>
+
+        <div id="content-tab1" class="setup-content space-y-8">
+            <div class="glass p-8 rounded-3xl border-l-4 border-indigo-600">
+                <h4 class="text-xl font-black uppercase italic text-white mb-2">1. Installation</h4>
+                <p class="text-xs font-bold text-slate-400 uppercase leading-loose">Installieren Sie eine kompatible [SOFTWARE] über den [PLATZ-CODE]:</p>
+                <div class="flex gap-4 mt-4">
+                    <div class="bg-black/40 p-4 rounded-xl text-center border border-white/10 w-full"><span class="block text-[9px] text-indigo-400 font-black mb-1">[APP A]</span><span class="text-2xl font-black text-white">327187</span></div>
+                    <div class="bg-black/40 p-4 rounded-xl text-center border border-white/10 w-full"><span class="block text-[9px] text-indigo-400 font-black mb-1">[APP B]</span><span class="text-2xl font-black text-white">7718585</span></div>
+                </div>
+            </div>
+            <div class="glass p-8 rounded-3xl border-l-4 border-emerald-500">
+                <h4 class="text-xl font-black uppercase italic text-white mb-2">2. Aktivierung</h4>
+                <p class="text-xs font-bold text-slate-400 uppercase leading-loose">Notieren Sie [ID] & [KEY] aus der App und nutzen Sie das Formular unten.</p>
+            </div>
+        </div>
+
+        <div id="content-tab2" class="setup-content hidden space-y-8">
+            <div class="glass p-8 rounded-3xl border-l-4 border-slate-500">
+                <h4 class="text-xl font-black uppercase italic text-white mb-2">Klienten</h4>
+                <p class="text-xs font-bold text-slate-400 uppercase leading-loose">Laden Sie kompatible [PROGRAMME] direkt aus Ihrem Store.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="py-24 px-6 overflow-hidden">
+    <div class="ticker-wrap">
+        <div class="ticker">
+            <!-- Testimonials -->
+            <div class="w-[300px] glass p-6 rounded-2xl flex-shrink-0">
+                <div class="flex text-amber-400 text-xs mb-2"><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i></div>
+                <p class="text-[10px] font-bold text-slate-300 uppercase leading-relaxed">"Die Qualität ist der Wahnsinn. Endlich stabil."</p>
+                <div class="mt-4 text-[9px] font-black text-indigo-500 uppercase">- Markus D.</div>
+            </div>
+            <div class="w-[300px] glass p-6 rounded-2xl flex-shrink-0">
+                <div class="flex text-amber-400 text-xs mb-2"><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i></div>
+                <p class="text-[10px] font-bold text-slate-300 uppercase leading-relaxed">"Support innerhalb von 5 Minuten geantwortet."</p>
+                <div class="mt-4 text-[9px] font-black text-indigo-500 uppercase">- Stefan K.</div>
+            </div>
+            <div class="w-[300px] glass p-6 rounded-2xl flex-shrink-0">
+                <div class="flex text-amber-400 text-xs mb-2"><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i></div>
+                <p class="text-[10px] font-bold text-slate-300 uppercase leading-relaxed">"Habe das Yearly Paket. Läuft seit 8 Monaten fehlerfrei."</p>
+                <div class="mt-4 text-[9px] font-black text-indigo-500 uppercase">- Thomas W.</div>
+            </div>
+            <!-- Duplikat für Endlos-Effekt -->
+            <div class="w-[300px] glass p-6 rounded-2xl flex-shrink-0">
+                <div class="flex text-amber-400 text-xs mb-2"><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i></div>
+                <p class="text-[10px] font-bold text-slate-300 uppercase leading-relaxed">"Die Qualität ist der Wahnsinn. Endlich stabil."</p>
+                <div class="mt-4 text-[9px] font-black text-indigo-500 uppercase">- Markus D.</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section id="faq" class="py-32 px-6 border-t border-white/5">
+    <div class="max-w-4xl mx-auto grid gap-6">
+        <h2 class="text-center text-4xl font-black uppercase italic text-white mb-10">Knowledge <span class="text-indigo-500">Base</span></h2>
+        
+        <details class="glass p-8 rounded-3xl group">
+            <summary class="flex justify-between items-center cursor-pointer list-none"><span class="text-xs font-black uppercase text-white tracking-widest">Lizenzierung?</span><i class="fas fa-plus text-indigo-500 transition-transform group-open:rotate-45"></i></summary>
+            <div class="mt-4 text-[11px] font-bold text-slate-400 uppercase leading-loose border-t border-white/5 pt-4">Wir bieten die Infrastruktur. Kompatible Drittanbieter-Apps können eigene Aktivierungsgebühren verlangen.</div>
+        </details>
+        <details class="glass p-8 rounded-3xl group">
+            <summary class="flex justify-between items-center cursor-pointer list-none"><span class="text-xs font-black uppercase text-white tracking-widest">Aktivierungsdauer?</span><i class="fas fa-plus text-indigo-500 transition-transform group-open:rotate-45"></i></summary>
+            <div class="mt-4 text-[11px] font-bold text-slate-400 uppercase leading-loose border-t border-white/5 pt-4">Nach Zahlungseingang erfolgt der Sync in die Datenbank meist innerhalb von 15-45 Minuten.</div>
+        </details>
+        
+        <div class="glass p-8 rounded-3xl mt-10 max-h-48 overflow-y-auto border border-red-500/20">
+            <h5 class="text-[10px] font-black uppercase text-red-400 mb-4 sticky top-0 bg-[#0a0a0f] py-2">AGB / Rechtliches</h5>
+            <p class="text-[9px] font-bold text-slate-500 uppercase leading-relaxed">
+                §1. Dienstleistung ist rein technischer Natur (Routing). §2. Keine Haftung für externe [INHALTE]. §3. Keine Rückerstattung bei digitalen Gütern nach Aktivierung. §4. Keine Abonnements, nur Prepaid Laufzeiten.
+            </p>
+        </div>
+    </div>
+</section>
+
+<footer class="py-32 px-6 border-t border-white/5 bg-black text-center">
+    <div class="max-w-2xl mx-auto">
+        <div class="text-5xl font-black italic text-white mb-8">VONE</div>
+        <a href="[DEIN-LINK]" target="_blank" class="inline-block px-12 py-5 bg-white text-black rounded-xl font-black uppercase text-[10px] tracking-widest hover:scale-105 transition shadow-2xl mb-12">Support Ticket öffnen</a>
+        <div class="text-[8px] font-bold text-slate-800 uppercase tracking-[1em]">© 2026 VisionOne Core.</div>
+    </div>
+</footer>
+
+<!-- ORDER MODAL -->
+<div id="orderModal" class="fixed inset-0 z-[9999] hidden flex items-center justify-center bg-black/95 p-4 backdrop-blur-md overflow-y-auto">
+    <div id="modalContent" class="glass-strong w-full max-w-xl p-8 rounded-[3rem] relative border border-indigo-500/20 transform scale-95 opacity-0 transition-all duration-300">
+        <button onclick="closeModal()" class="absolute top-8 right-8 text-slate-400 hover:text-white">✕</button>
+        <div class="text-center mb-10">
+            <h2 class="text-3xl font-black uppercase italic text-white mb-2">System <span class="text-indigo-500">Sync</span></h2>
+            <div id="planDisplay" class="inline-block px-4 py-1 rounded-lg bg-indigo-500/10 text-indigo-400 text-[10px] font-black uppercase mono"></div>
+        </div>
+        <form id="orderForm" class="space-y-5">
+            <input type="text" id="nameInput" placeholder="IHR NAME / ALIAS" class="w-full p-5 bg-[#0a0a0f] border border-white/10 rounded-2xl text-[11px] font-bold text-white uppercase outline-none focus:border-indigo-500" required>
+            <input type="text" id="macInput" maxlength="17" placeholder="ID: 00:00:00:00:00:00" class="mac-font w-full p-5 bg-[#0a0a0f] border border-white/10 rounded-2xl text-[11px] font-bold text-white uppercase outline-none focus:border-indigo-500" required>
+            <div class="grid grid-cols-2 gap-4">
+                <input type="text" id="keyInput" maxlength="6" placeholder="KEY (123456)" class="p-5 bg-[#0a0a0f] border border-white/10 rounded-2xl text-[11px] text-white text-center" required>
+                <select id="playerSelect" onchange="toggleOtherPlayer()" class="p-5 bg-[#0a0a0f] border border-white/10 rounded-2xl text-[10px] font-bold text-white uppercase cursor-pointer">
+                    <option value="APP-A">[KLIENT A]</option><option value="APP-B">[KLIENT B]</option><option value="OTHER">Andere...</option>
+                </select>
+            </div>
+            <div id="otherPlayerDiv" class="hidden"><input type="text" id="otherPlayerInput" placeholder="SYSTEM-NAME" class="w-full p-5 bg-indigo-900/10 border border-indigo-500/30 rounded-2xl text-[11px] font-bold text-white uppercase outline-none"></div>
+            <button type="submit" id="submitBtn" class="w-full py-6 bg-indigo-600 text-white rounded-2xl font-black uppercase text-[11px] shadow-xl active:scale-95 transition-all"><span id="btnText">Jetzt Aktivieren</span></button>
+        </form>
+    </div>
+</div>
+
+<script>
+    // --- KONFIGURATION ---
+    const firebaseConfig = { databaseURL: "https://db--merkez-default-rtdb.europe-west1.firebasedatabase.app/" };
+    const SUPPORT_LINK = "https://teams.live.com/l/community/FEAnh8L1jzMf2tJ9wQ";
+
+    // --- LOADER LOGIC ---
+    function hideLoader() {
+        const l = document.getElementById('loader');
+        if (l) { l.style.opacity = '0'; setTimeout(() => l.style.display = 'none', 500); document.body.style.overflow = 'auto'; }
+    }
+    const backupTimeout = setTimeout(hideLoader, 3000);
+    window.addEventListener('load', () => { clearTimeout(backupTimeout); setTimeout(hideLoader, 1000); });
+
+    // --- UI UI LOGIC ---
+    function toggleMenu() { document.getElementById('menuOverlay').classList.toggle('translate-x-full'); }
+    
+    function switchTab(id) {
+        document.querySelectorAll('.setup-content').forEach(el => el.classList.add('hidden'));
+        document.getElementById('content-' + id).classList.remove('hidden');
+        document.getElementById('btn-tab1').className = "px-8 py-4 bg-white/5 border border-white/5 rounded-xl text-[10px] font-black uppercase text-slate-400";
+        document.getElementById('btn-tab2').className = "px-8 py-4 bg-white/5 border border-white/5 rounded-xl text-[10px] font-black uppercase text-slate-400";
+        document.getElementById('btn-' + id).className = "px-8 py-4 bg-indigo-600 rounded-xl text-[10px] font-black uppercase text-white shadow-lg";
+    }
+
+    function openModal(plan) {
+        document.getElementById('planDisplay').innerText = plan;
+        document.getElementById('orderModal').classList.remove('hidden');
+        setTimeout(() => {
+            document.getElementById('modalContent').classList.remove('scale-95', 'opacity-0');
+            document.getElementById('modalContent').classList.add('scale-100', 'opacity-100');
+        }, 10);
+    }
+    function closeModal() {
+        document.getElementById('modalContent').classList.remove('scale-100', 'opacity-100');
+        document.getElementById('modalContent').classList.add('scale-95', 'opacity-0');
+        setTimeout(() => document.getElementById('orderModal').classList.add('hidden'), 300);
+    }
+    function toggleOtherPlayer() {
+        const div = document.getElementById('otherPlayerDiv');
+        div.classList.toggle('hidden', document.getElementById('playerSelect').value !== 'OTHER');
+    }
+
+    // --- FIREBASE & DATA ---
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    document.getElementById('macInput').addEventListener('input', function(e) {
+        let v = e.target.value.toUpperCase().replace(/[^0-9A-Z]/g, '');
+        let f = "";
+        for(let i = 0; i < v.length && i < 12; i++) { if(i > 0 && i % 2 === 0) f += ":"; f += v[i]; }
+        e.target.value = f;
+    });
+
+    document.getElementById('orderForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const btn = document.getElementById('submitBtn');
+        const txt = document.getElementById('btnText');
+        btn.disabled = true; txt.innerText = "SYNCING...";
+
+        try {
+            await db.ref('bestellungen').push({
+                name: document.getElementById('nameInput').value,
+                id: document.getElementById('macInput').value,
+                key: document.getElementById('keyInput').value,
+                app: document.getElementById('playerSelect').value === 'OTHER' ? document.getElementById('otherPlayerInput').value : document.getElementById('playerSelect').value,
+                plan: document.getElementById('planDisplay').innerText,
+                date: new Date().toISOString()
+            });
+            txt.innerText = "COMPLETE ✓";
+            setTimeout(() => { window.open(SUPPORT_LINK, "_blank"); closeModal(); btn.disabled = false; txt.innerText = "Jetzt Aktivieren"; }, 1000);
+        } catch (err) { alert("Error: " + err.message); btn.disabled = false; txt.innerText = "ERROR"; }
+    });
+
+    // Stats Init
+    setTimeout(() => {
+        if (typeof countUp !== 'undefined') {
+            new countUp.CountUp('countUsers', 12402, { duration: 3 }).start();
+            new countUp.CountUp('countThreats', 8942, { duration: 4 }).start();
+        }
+        if (typeof AOS !== 'undefined') AOS.init({ duration: 800, once: true });
+    }, 1500);
+</script>
+
+</body>
+</html>
